@@ -5,7 +5,7 @@ export const CUSTOM_ELEMENT_TAG_NAME = 'router-link';
 export const CUSTOM_ELEMENT_NODE_NAME = CUSTOM_ELEMENT_TAG_NAME.toUpperCase();
 export const SCRIPTS_CLASS_NAME = 'autoroute-script';
 export const CONTAINER_NAME = 'autoroute-view';
-const MAIN_CONTAINER = document.getElementById('autoroute-view');
+const MAIN_CONTAINER = document.getElementById('autoroutes-view'); // TODO, configurable?
 const WILDCARD_CHARACTER = ':';
 const LAZY_EVENT_NAME = 'routerEvent';
 
@@ -28,7 +28,7 @@ const Autoroute = {
     appPath: window.location.origin,
     htmlFolder: '',
     wildcards: [],
-    route: '',
+    route: '', // TODO pass data in object + cleanup after each navigation?
 }
 // TODO add DEBUG variable
 
@@ -56,10 +56,10 @@ function start(config) {
 
 function addListeners() {
     // Dispatch event when clicking a router link
-    document.addEventListener('click', event => {
+    document.addEventListener('click', event => { // TODO, expose a method to programmatically navigate
         if (event.target && event.target.nodeType && event.target.matches(`${CUSTOM_ELEMENT_TAG_NAME}, ${CUSTOM_ELEMENT_TAG_NAME} *`)) {
             const targetRouterLink = event.target.nodeName === CUSTOM_ELEMENT_NODE_NAME ? event.target : event.target.closest(CUSTOM_ELEMENT_TAG_NAME);
-            const data = targetRouterLink.getAttribute('pathData') ?? null;
+            const data = JSON.parse(targetRouterLink.getAttribute('pathData')) ?? null; // TODO try/catch
             const path = targetRouterLink.getAttribute('to');
             const fixedPath = path.charAt(0) === '/' ? path : '/' + path; // Allows to omit leading "/"
             LAZY_EVENT.path = fixedPath;
@@ -78,6 +78,9 @@ function addListeners() {
 }
 
 async function mountView(route) {
+    // Allow to run auth checks for instance
+    if (await Autoroute.beforeNavigation() === false) return;
+    // Check path validity before continuing
     if (!validatePath(route)) return;
 
     // Get view path from route
@@ -95,11 +98,8 @@ async function mountView(route) {
     // Remove current view's scripts
     cleanScripts();
 
-    // Allow to run auth checks for instance
-    await Autoroute.beforeNavigation();
-
     if (path.match(/\.html/)) {
-        MAIN_CONTAINER.innerHTML = await loadHTML(Autoroute.appPath, Autoroute.htmlFolder, path);
+        MAIN_CONTAINER.innerHTML = await loadHTML(Autoroute.appPath, Autoroute.htmlFolder, path); // TODO default shouldn't
     }
     else if (path.match(/\.js/)) {
         MAIN_CONTAINER.innerHTML = '';
@@ -115,12 +115,12 @@ async function mountView(route) {
     // Post-rendering hook
     await Autoroute.afterNavigation();
 
-    // Add and run ne wiew's scripts
+    // Add and run the wiew's scripts
     loadScripts();
 }
 
 function validatePath(route) {
-    // Only accept / relative path prefix or no prefix at all
+    // Only accept the `/` relative path prefix or no prefix at all
     const pathRegExp = new RegExp(/^(\/?:?[.a-zA-Z0-9-]*\/?)+$/);
     const isValidPath = pathRegExp.test(route);
     if (!isValidPath) console.error(`${ROUTER_NAME}: Specified route is not valid, it might contain invalid characters. Relative paths prefixes other than / aren't allowed (yet).`)
