@@ -9,15 +9,16 @@ const Autoroutes = {
     viewsContainerId: 'autoroutes-view',
     wildcardChar: ':',
     tagName: 'router-link',
-    scriptsClass: 'autoroutes-script'
+    scriptsClass: 'autoroutes-script',
+    debug: true
 }
-// TODO add DEBUG variable
 
 // Some methods must be immutable
 const readOnlyProperties = {
     addListeners,
     mountView,
-    start
+    start,
+    name: 'Autoroutes'
 }
 for (const [property, value] of Object.entries(readOnlyProperties)) Object.defineProperty(Autoroutes, property, {value, writable: false});
 
@@ -44,11 +45,11 @@ function start(config) {
     window.Autoroutes = Autoroutes;
     Autoroutes.addListeners();
     if (!Autoroutes.routes.default) {
-        console.error(`${ROUTER_NAME}: No default route specified.`);
+        if (Autoroutes.debug) console.error(`${Autoroutes.name}: No default route specified.`);
         return;
     }
     if (typeof Autoroutes.routes.default !== 'string') {
-        console.error(`${ROUTER_NAME}: Default route is not a valid string.`);
+        if (Autoroutes.debug) console.error(`${Autoroutes.name}: Default route is not a valid string.`);
         return;
     }
     Autoroutes.mountView(getNavigationPath());
@@ -91,7 +92,7 @@ async function mountView(route) {
     Autoroutes.wildcards = [];
     let path = getFilePath(fixedRoute.split('/')); // BUG default path currently uses fallback
     if (!path) {
-        console.error(`${ROUTER_NAME}: The error above was triggered because of path:`, fixedRoute);
+        if (Autoroutes.debug) console.error(`${Autoroutes.name}: The error above was triggered because of path:`, fixedRoute);
         return;
     }
 
@@ -108,7 +109,7 @@ async function mountView(route) {
         });
     }
     else {
-        console.error(`${ROUTER_NAME}: File type not supported... yet.`);
+        if (Autoroutes.debug) console.error(`${Autoroutes.name}: File type not supported... yet.`);
         return;
     }
 
@@ -130,7 +131,7 @@ function validatePath(route) {
     // Only accept the `/` relative path prefix or no prefix at all
     const pathRegExp = new RegExp(/^(\/?:?[.a-zA-Z0-9-]*\/?)+$/);
     const isValidPath = pathRegExp.test(route);
-    if (!isValidPath) console.error(`${ROUTER_NAME}: Specified route is not valid, it might contain invalid characters. Relative paths prefixes other than / aren't allowed (yet).`)
+    if (!isValidPath && Autoroutes.debug) console.error(`${Autoroutes.name}: Specified route is not valid, it might contain invalid characters. Relative paths prefixes other than / aren't allowed (yet).`)
 
     return isValidPath;
 }
@@ -144,7 +145,7 @@ function getFilePath(routeArray, currentPathValue = Autoroutes.routes) {
     let newPathValue = currentPathValue[route];
     let wildcardRoute = '';
     if (newPathValue === null || Array.isArray(newPathValue) || (typeof newPathValue !== 'object' && typeof newPathValue !== 'string') && newPathValue !== undefined) {
-        console.error(`${ROUTER_NAME}: Route mismatch, routes must be either a file path (string) or an object containing file paths/nested file paths. \nReceived the following value:`, currentPathValue);
+        if (Autoroutes.debug) console.error(`${Autoroutes.name}: Route mismatch, routes must be either a file path (string) or an object containing file paths/nested file paths. \nReceived the following value:`, currentPathValue);
         return;
     }
     if (newPathValue === undefined && typeof currentPathValue === 'object') {
@@ -155,7 +156,10 @@ function getFilePath(routeArray, currentPathValue = Autoroutes.routes) {
         }
         else if (Autoroutes.routes.fallback) newPathValue = Autoroutes.routes.fallback;
         else if (Autoroutes.routes.default) newPathValue = Autoroutes.routes.default;
-        else return console.error(`${ROUTER_NAME}: No fallback found for 404 routes.`);
+        else {
+            if (Autoroutes.debug) console.error(`${Autoroutes.name}: No fallback found for 404 routes.`);
+            return;
+        }
     }
     Autoroutes.route += `/${wildcardRoute || route}`;
     if (routeArray.length === 1) return newPathValue;
