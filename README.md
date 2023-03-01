@@ -1,4 +1,6 @@
 # auto-routes-js
+*v1.1.0*
+
 A basic but configurable client-side router. The SPA experience in vanilla JS and HTML and with no hassle due to a huge framework.
 
 No other third-party dependencies, no bundler needed, no framework necessary, just that one library and you can easily create your own SPA!
@@ -52,7 +54,7 @@ In your main HTML file, say `/public/index.html`, add a tag with the id `autorou
   <body>
     <header>Welcome to My Awesome SPA</header>
     <section id="autoroutes-view"></section>
-    <script src="https://www.unpkg.com/auto-routes-js@1.1.0/dist/Autoroutes.min.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
+    <script src="https://www.unpkg.com/auto-routes-js@1.1.0/dist/Autoroutes-v1.1.0.min.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
     <script src="/src/index.js" type="module"></script>
   </body>
 </html>
