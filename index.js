@@ -11,7 +11,7 @@ const Autoroutes = {
     tagName: 'router-link',
     scriptsClass: 'autoroutes-script',
     debug: true,
-    data: null
+    draftData: null
 }
 
 // Some methods must be immutable
@@ -132,7 +132,7 @@ function navigate(route, data) {
     const fixedPath = route.charAt(0) === '/' ? route : '/' + route; // Allows to omit leading "/"
     NAVIGATION_EVENT.path = fixedPath;
 
-    const fixedData = data !== undefined ? data : Autoroutes.data;
+    const fixedData = data !== undefined ? data : Autoroutes.draftData;
     history.pushState(fixedData, '', fixedPath);
 
     // Ensure no data might be accidentally added in next navigation
@@ -143,7 +143,7 @@ function navigate(route, data) {
 }
 
 function setData(data = {}) {
-    Autoroutes.data = data;
+    Autoroutes.draftData = data;
 }
 
 function getData() {
