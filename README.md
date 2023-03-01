@@ -1,4 +1,6 @@
 # auto-routes-js
+*v1.1.0*
+
 A basic but configurable client-side router. The SPA experience in vanilla JS and HTML and with no hassle due to a huge framework.
 
 No other third-party dependencies, no bundler needed, no framework necessary, just that one library and you can easily create your own SPA!
@@ -33,6 +35,7 @@ import routes from './routes.js';
 
 // Set the router's settings (none are mandatory), see the "Configuration" section further below
 const settings = {
+    debug: false, // Setting this value to false will prevent Autoroutes to log anything, useful for production environments
     htmlFolder: 'src',
     appPath: 'http://localhost:5000'
 }
@@ -46,12 +49,12 @@ In your main HTML file, say `/public/index.html`, add a tag with the id `autorou
 <!doctype html>
 <html>
   <head>
-    <title>Lazy Router</title>
+    <title>My Awesome SPA</title>
   </head>
   <body>
-    <header>Hello !</header>
-    <section id="autoroute-view"></section>
-    <script src="TODO/PATH/TO/CDN.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
+    <header>Welcome to My Awesome SPA</header>
+    <section id="autoroutes-view"></section>
+    <script src="https://www.unpkg.com/auto-routes-js@1.1.0/dist/Autoroutes-v1.1.0.min.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
     <script src="/src/index.js" type="module"></script>
   </body>
 </html>
