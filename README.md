@@ -33,6 +33,7 @@ import routes from './routes.js';
 
 // Set the router's settings (none are mandatory), see the "Configuration" section further below
 const settings = {
+    debug: false, // Setting this value to false will prevent Autoroutes to log anything, useful for production environments
     htmlFolder: 'src',
     appPath: 'http://localhost:5000'
 }
