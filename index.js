@@ -22,7 +22,8 @@ const readOnlyProperties = {
     getData,
     setData,
     start,
-    name: 'Autoroutes'
+    name: 'Autoroutes',
+    version: '1.1.0'
 }
 for (const [property, value] of Object.entries(readOnlyProperties)) Object.defineProperty(Autoroutes, property, {value, writable: false});
 
