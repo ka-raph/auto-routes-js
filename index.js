@@ -129,15 +129,14 @@ async function mountView(route) {
 function navigate(route, data = {}) {
     const fixedPath = route.charAt(0) === '/' ? route : '/' + route; // Allows to omit leading "/"
     NAVIGATION_EVENT.path = fixedPath;
-    history.pushState({data}, '', fixedPath);
+    history.pushState(data, '', fixedPath);
 
     document.dispatchEvent(NAVIGATION_EVENT);
     mountView(route)
 }
 
 function getData() {
-    const state = history.state !== null ? history.state.data : null;
-    return state;
+    return history.state;
 }
 
 
