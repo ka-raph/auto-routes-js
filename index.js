@@ -1,5 +1,3 @@
-import { cleanScripts, loadHTML, loadScripts } from "./utils.js";
-
 export const ROUTER_NAME = 'Autoroute';
 export const CUSTOM_ELEMENT_TAG_NAME = 'router-link';
 export const CUSTOM_ELEMENT_NODE_NAME = CUSTOM_ELEMENT_TAG_NAME.toUpperCase();
@@ -39,6 +37,11 @@ export default Autoroute;
 
 
 
+// ======================================================================================
+// ==                                                                                  ==
+// ==                                     METHODS                                      ==
+// ==                                                                                  ==
+// ======================================================================================
 function start(config) {
     Object.assign(Autoroute, config);
     window.Autoroute = Autoroute;
@@ -119,6 +122,13 @@ async function mountView(route) {
     loadScripts();
 }
 
+
+
+// ======================================================================================
+// ==                                                                                  ==
+// ==                                      UTILS                                       ==
+// ==                                                                                  ==
+// ======================================================================================
 function validatePath(route) {
     // Only accept the `/` relative path prefix or no prefix at all
     const pathRegExp = new RegExp(/^(\/?:?[.a-zA-Z0-9-]*\/?)+$/);
@@ -158,4 +168,39 @@ function getFilePath(routeArray, currentPathValue = Autoroute.routes) {
 function getNavigationPath() {
     const urlPath = window.location.href.replace(Autoroute.appPath, '');
     return urlPath;
+}
+
+async function loadHTML(appPath, htmlFolder, htmlRelativeUrl) {
+    const VIEWS_PATH = '/' + htmlFolder;
+    const htmlUrl = new URL(VIEWS_PATH + htmlRelativeUrl, appPath).href;
+    const response = await fetch(htmlUrl);
+    return await response.text();
+}
+
+function loadScripts() {
+    // Appending a script like this doesn't work by default, it won't run the script
+    const scripts = document.querySelectorAll(`#${CONTAINER_NAME} script`);
+
+    scripts.forEach(script => {
+        script.classList.add(SCRIPTS_CLASS_NAME);
+        const jscript = script.outerHTML;
+
+        // Remove the current script
+        script.parentElement.removeChild(script);
+
+        // Create document fragment that'll add and run the script
+        const range = document.createRange();
+        range.selectNode(document.getElementsByTagName("BODY")[0]);
+        const documentFragment = range.createContextualFragment(jscript);
+        document.head.appendChild(documentFragment); // TODO, use this methodology to append the whole file instead of loading it as a string?
+    })
+}
+
+function cleanScripts() {
+    const head = document.querySelectorAll('head');
+    const scripts = document.querySelectorAll(`head ${SCRIPTS_CLASS_NAME}`);
+
+    scripts.forEach(script => {
+        script.parentNode.removeChild(script);
+    })
 }
