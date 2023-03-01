@@ -46,12 +46,12 @@ In your main HTML file, say `/public/index.html`, add a tag with the id `autorou
 <!doctype html>
 <html>
   <head>
-    <title>Lazy Router</title>
+    <title>My Awesome SPA</title>
   </head>
   <body>
-    <header>Hello !</header>
+    <header>Welcome to My Awesome SPA</header>
     <section id="autoroute-view"></section>
-    <script src="TODO/PATH/TO/CDN.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
+    <script src="https://www.unpkg.com/auto-routes-js@1.1.0/dist/Autoroutes.min.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
     <script src="/src/index.js" type="module"></script>
   </body>
 </html>
