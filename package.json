@@ -1,10 +1,10 @@
 {
   "name": "auto-routes-js",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A basic but configurable client-side router. The SPA experience in vanilla JS and HTML and with no hassle due to a huge framework.",
   "main": "index.js",
   "scripts": {
-    "minify": "npx mkdirp dist && npx uglify-js index.js -o dist/Autoroutes.min.js"
+    "minify": "npx mkdirp dist && npx uglify-js index.js -o dist/Autoroutes-v1.1.0.min.js"
   },
   "repository": {
     "type": "git",
