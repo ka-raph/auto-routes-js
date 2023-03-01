@@ -10,7 +10,8 @@ const Autoroutes = {
     wildcardChar: ':',
     tagName: 'router-link',
     scriptsClass: 'autoroutes-script',
-    debug: true
+    debug: true,
+    data: null
 }
 
 // Some methods must be immutable
@@ -19,6 +20,7 @@ const readOnlyProperties = {
     mountView,
     navigate,
     getData,
+    setData,
     start,
     name: 'Autoroutes'
 }
@@ -62,9 +64,9 @@ function addListeners() {
     document.addEventListener('click', event => {
         if (event.target && event.target.nodeType && event.target.matches(`${Autoroutes.tagName}, ${Autoroutes.tagName} *`)) {
             const targetRouterLink = event.target.nodeName === Autoroutes.tagName.toUpperCase() ? event.target : event.target.closest(Autoroutes.tagName);
-            let data = {};
+            let data = null;
             try {
-                data = JSON.parse(targetRouterLink.getAttribute('pathData'));
+                data = JSON.parse(targetRouterLink.getAttribute('pathData') ?? null);
             } 
             catch(e) {
                 if (Autoroutes.debug) console.error(`${Autoroutes.name}: Could not parse data to set navigation state. Data value received:`, data, 'Standard error:', e);
@@ -126,13 +128,22 @@ async function mountView(route) {
     loadScripts();
 }
 
-function navigate(route, data = {}) {
+function navigate(route, data) {
     const fixedPath = route.charAt(0) === '/' ? route : '/' + route; // Allows to omit leading "/"
     NAVIGATION_EVENT.path = fixedPath;
-    history.pushState(data, '', fixedPath);
+
+    const fixedData = data !== undefined ? data : Autoroutes.data;
+    history.pushState(fixedData, '', fixedPath);
+
+    // Ensure no data might be accidentally added in next navigation
+    setData(null);
 
     document.dispatchEvent(NAVIGATION_EVENT);
     mountView(route)
+}
+
+function setData(data = {}) {
+    Autoroutes.data = data;
 }
 
 function getData() {
@@ -217,7 +228,6 @@ function loadScripts() {
 }
 
 function cleanScripts() {
-    const head = document.querySelectorAll('head');
     const scripts = document.querySelectorAll(`head ${Autoroutes.scriptsClass}`);
 
     scripts.forEach(script => {
