@@ -4,7 +4,7 @@
   "description": "A basic but configurable client-side router. The SPA experience in vanilla JS and HTML and with no hassle due to a huge framework.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "minify": "npx uglify-js index.js -o Autoroutes.min.js"
   },
   "repository": {
     "type": "git",
