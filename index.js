@@ -5,18 +5,22 @@ const Autoroutes = {
     appPath: window.location.origin,
     htmlFolder: '',
     wildcards: [],
-    route: '', // TODO pass data in object + cleanup after each navigation?
+    route: '',
     viewsContainerId: 'autoroutes-view',
     wildcardChar: ':',
     tagName: 'router-link',
     scriptsClass: 'autoroutes-script',
-    debug: true
+    debug: true,
+    draftData: null
 }
 
 // Some methods must be immutable
 const readOnlyProperties = {
     addListeners,
     mountView,
+    navigate,
+    getData,
+    setData,
     start,
     name: 'Autoroutes'
 }
@@ -57,15 +61,19 @@ function start(config) {
 
 function addListeners() {
     // Dispatch event when clicking a router link
-    document.addEventListener('click', event => { // TODO, expose a method to programmatically navigate
+    document.addEventListener('click', event => {
         if (event.target && event.target.nodeType && event.target.matches(`${Autoroutes.tagName}, ${Autoroutes.tagName} *`)) {
             const targetRouterLink = event.target.nodeName === Autoroutes.tagName.toUpperCase() ? event.target : event.target.closest(Autoroutes.tagName);
-            const data = JSON.parse(targetRouterLink.getAttribute('pathData')) ?? null; // TODO try/catch
+            let data = null;
+            try {
+                data = JSON.parse(targetRouterLink.getAttribute('pathData') ?? null);
+            } 
+            catch(e) {
+                if (Autoroutes.debug) console.error(`${Autoroutes.name}: Could not parse data to set navigation state. Data value received:`, data, 'Standard error:', e);
+            }
             const path = targetRouterLink.getAttribute('to');
-            const fixedPath = path.charAt(0) === '/' ? path : '/' + path; // Allows to omit leading "/"
-            NAVIGATION_EVENT.path = fixedPath;
-            history.pushState(data, '', fixedPath);
-            document.dispatchEvent(NAVIGATION_EVENT);
+
+            navigate(path, data);
         }
     });
 
@@ -90,9 +98,9 @@ async function mountView(route) {
     // Get the path of the file to load and update router's values
     Autoroutes.route = '';
     Autoroutes.wildcards = [];
-    let path = getFilePath(fixedRoute.split('/')); // BUG default path currently uses fallback
+    let path = getFilePath(fixedRoute.split('/'));
     if (!path) {
-        if (Autoroutes.debug) console.error(`${Autoroutes.name}: The error above was triggered because of path:`, fixedRoute);
+        if (Autoroutes.debug) console.error(`${Autoroutes.name}: The error above was triggered because of path.`, fixedRoute);
         return;
     }
 
@@ -118,6 +126,28 @@ async function mountView(route) {
 
     // Add and run the wiew's scripts
     loadScripts();
+}
+
+function navigate(route, data) {
+    const fixedPath = route.charAt(0) === '/' ? route : '/' + route; // Allows to omit leading "/"
+    NAVIGATION_EVENT.path = fixedPath;
+
+    const fixedData = data !== undefined ? data : Autoroutes.draftData;
+    history.pushState(fixedData, '', fixedPath);
+
+    // Ensure no data might be accidentally added in next navigation
+    setData(null);
+
+    document.dispatchEvent(NAVIGATION_EVENT);
+    mountView(route)
+}
+
+function setData(data = {}) {
+    Autoroutes.draftData = data;
+}
+
+function getData() {
+    return history.state;
 }
 
 
@@ -198,7 +228,6 @@ function loadScripts() {
 }
 
 function cleanScripts() {
-    const head = document.querySelectorAll('head');
     const scripts = document.querySelectorAll(`head ${Autoroutes.scriptsClass}`);
 
     scripts.forEach(script => {
