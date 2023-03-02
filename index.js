@@ -94,20 +94,21 @@ async function mountView(route) {
     if (!validatePath(route)) return;
 
     // Get view path from route
-    const fixedRoute = route !== '/' ? route : 'default';
+    const fixedRoute = route === '/' || route === '' ? 'default' : route;
 
     // Get the path of the file to load and update router's values
     Autoroutes.route = '';
     Autoroutes.wildcards = [];
     let path = getFilePath(fixedRoute.split('/'));
     if (!path) {
-        if (Autoroutes.debug) console.error(`${Autoroutes.name}: The error above was triggered because of path.`, fixedRoute);
+        if (Autoroutes.debug) console.error(`${Autoroutes.name}: The error above was triggered because of path.`, route);
         return;
     }
 
     // Remove current view's scripts
     cleanScripts();
 
+    // Mount view
     if (path.match(/\.html/)) {
         MAIN_CONTAINER.innerHTML = await loadHTML(Autoroutes.appPath, Autoroutes.htmlFolder, path);
     }
@@ -160,7 +161,7 @@ function getData() {
 // ======================================================================================
 function validatePath(route) {
     // Only accept the `/` relative path prefix or no prefix at all
-    const pathRegExp = new RegExp(/^(\/?:?[.a-zA-Z0-9-]*\/?)+$/);
+    const pathRegExp = new RegExp(`^(\/?${Autoroutes.wildcardChar}?[.a-zA-Z0-9-]*\/?)+$`);
     const isValidPath = pathRegExp.test(route);
     if (!isValidPath && Autoroutes.debug) console.error(`${Autoroutes.name}: Specified route is not valid, it might contain invalid characters. Relative paths prefixes other than / aren't allowed (yet).`)
 
@@ -170,39 +171,47 @@ function validatePath(route) {
 function getFilePath(routeArray, currentPathValue = Autoroutes.routes) {
     // Recursively go through the Autoroutes.routes object to find view's file path from the route
     const route = routeArray[0];
-    if (typeof currentPathValue === 'string' && routeArray.length === 1 && routeArray[0].length === 0) return currentPathValue;
+    if (typeof currentPathValue === 'string' && routeArray.length === 1 && routeArray[0].length === 0) return currentPathValue; // Trailing "/", path is complete
     if (route.length === 0) return getFilePath(routeArray.slice(1), currentPathValue); // Allows leading "/" in routes
 
     let newPathValue = currentPathValue[route];
-    let wildcardRoute = '';
+
+    // Check malformated route
     if (newPathValue === null || Array.isArray(newPathValue) || (typeof newPathValue !== 'object' && typeof newPathValue !== 'string') && newPathValue !== undefined) {
         if (Autoroutes.debug) console.error(`${Autoroutes.name}: Route mismatch, routes must be either a file path (string) or an object containing file paths/nested file paths. \nReceived the following value:`, currentPathValue);
         return;
     }
+
+    // Handle wildcard & 404
+    let wildcardRoute = '';
     if (newPathValue === undefined && typeof currentPathValue === 'object') {
         wildcardRoute = Object.keys(currentPathValue).find(key => key.charAt(0) === Autoroutes.wildcardChar);
         if (wildcardRoute) {
+            // Only first wildcard will be caught
+            // TODO handle multiple wildcards at same level
             newPathValue = currentPathValue[wildcardRoute];
             Autoroutes.wildcards.push({name: wildcardRoute, value: route});
         }
-        else if (Autoroutes.routes.fallback) newPathValue = Autoroutes.routes.fallback;
-        else if (Autoroutes.routes.default) newPathValue = Autoroutes.routes.default;
+        else if (Autoroutes.routes.fallback) newPathValue = Autoroutes.routes.fallback; // 404
+        else if (Autoroutes.routes.default) newPathValue = Autoroutes.routes.default; // 404 isn't defined
         else {
             if (Autoroutes.debug) console.error(`${Autoroutes.name}: No fallback found for 404 routes.`);
             return;
         }
     }
     Autoroutes.route += `/${wildcardRoute || route}`;
-    if (routeArray.length === 1) return newPathValue;
-    else return getFilePath(routeArray.slice(1), newPathValue);
+
+    if (routeArray.length === 1) return newPathValue; // This was the last part of the route
+    else return getFilePath(routeArray.slice(1), newPathValue); // Go to next route part
 }
 
 function getNavigationPath() {
-    const urlPath = window.location.href.replace(Autoroutes.appPath, '');
+    const urlPath = window.location.href.replace(Autoroutes.appPath, ''); // TODO why not window.location.pathname?
     return urlPath;
 }
 
 async function loadHTML(appPath, htmlFolder, htmlRelativeUrl) {
+    // Fetches the view's HTML file and returns its content
     const VIEWS_PATH = '/' + htmlFolder;
     const htmlUrl = new URL(VIEWS_PATH + htmlRelativeUrl, appPath).href;
     const response = await fetch(htmlUrl);
