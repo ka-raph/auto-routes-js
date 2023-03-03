@@ -3,7 +3,7 @@ const Autoroutes = {
     afterNavigation: async () => true,
     routes: {},
     appPath: window.location.origin,
-    htmlFolder: '',
+    baseFolder: '/',
     wildcards: [],
     route: '',
     viewsContainerId: 'autoroutes-view',
@@ -23,13 +23,12 @@ const readOnlyProperties = {
     setData,
     start,
     name: 'Autoroutes',
-    version: '1.1.0'
+    version: '1.1.1'
 }
 for (const [property, value] of Object.entries(readOnlyProperties)) Object.defineProperty(Autoroutes, property, {value, writable: false});
 
 
 export default Autoroutes;
-
 
 const MAIN_CONTAINER = document.getElementById(Autoroutes.viewsContainerId);
 const EVENT_NAME = 'routerEvent';
@@ -45,7 +44,8 @@ const NAVIGATION_EVENT = new Event(EVENT_NAME, {
 // ==                                     METHODS                                      ==
 // ==                                                                                  ==
 // ======================================================================================
-function start(config) {
+function start(config) { // TODO validate config
+    if (config.baseFolder !== undefined) config.baseFolder.charAt(0) === '/' ? config.baseFolder : '/' + config.baseFolder;
     Object.assign(Autoroutes, config);
     window.Autoroutes = Autoroutes;
     Autoroutes.addListeners();
@@ -57,7 +57,7 @@ function start(config) {
         if (Autoroutes.debug) console.error(`${Autoroutes.name}: Default route is not a valid string.`);
         return;
     }
-    Autoroutes.mountView(getNavigationPath());
+    Autoroutes.mountView(window.location.pathname);
 }
 
 function addListeners() {
@@ -65,9 +65,9 @@ function addListeners() {
     document.addEventListener('click', event => {
         if (event.target && event.target.nodeType && event.target.matches(`${Autoroutes.tagName}, ${Autoroutes.tagName} *`)) {
             const targetRouterLink = event.target.nodeName === Autoroutes.tagName.toUpperCase() ? event.target : event.target.closest(Autoroutes.tagName);
-            let data = null;
+            let data = "null";
             try {
-                data = JSON.parse(targetRouterLink.getAttribute('pathData') ?? null);
+                data = JSON.parse(targetRouterLink.getAttribute('pathData') ?? "null"); // TODO remove oathData attribute
             } 
             catch(e) {
                 if (Autoroutes.debug) console.error(`${Autoroutes.name}: Could not parse data to set navigation state. Data value received:`, data, 'Standard error:', e);
@@ -84,7 +84,7 @@ function addListeners() {
     });
 
     // Listen to manual navigation ie. mouse navigation shortcut
-    window.addEventListener('popstate', (event) => Autoroutes.mountView(getNavigationPath()));
+    window.addEventListener('popstate', (event) => Autoroutes.mountView(window.location.pathname));
 }
 
 async function mountView(route) {
@@ -94,30 +94,30 @@ async function mountView(route) {
     if (!validatePath(route)) return;
 
     // Get view path from route
-    const fixedRoute = route !== '/' ? route : 'default';
+    const fixedRoute = route === '/' || route === '' ? 'default' : route;
 
     // Get the path of the file to load and update router's values
     Autoroutes.route = '';
     Autoroutes.wildcards = [];
     let path = getFilePath(fixedRoute.split('/'));
+    Autoroutes.route = Autoroutes.route.replace('/', ''); // First dash shouldn't be shown
     if (!path) {
-        if (Autoroutes.debug) console.error(`${Autoroutes.name}: The error above was triggered because of path.`, fixedRoute);
+        if (Autoroutes.debug) console.error(`${Autoroutes.name}: The error above was triggered because of path.`, route);
         return;
     }
 
     // Remove current view's scripts
     cleanScripts();
 
+    // Mount view
+    const fixedPath = Autoroutes.baseFolder + path;
     if (path.match(/\.html/)) {
-        MAIN_CONTAINER.innerHTML = await loadHTML(Autoroutes.appPath, Autoroutes.htmlFolder, path);
+        await loadHTMLView(fixedPath);
     }
     else if (path.match(/\.js/)) {
-        MAIN_CONTAINER.innerHTML = '';
-        await import(importRoute).then(async view => {
-            MAIN_CONTAINER.innerHTML = await view.default;
-        });
+        await loadJSView(fixedPath);
     }
-    else {
+    else { // TODO, add possibility to use a custom parser
         if (Autoroutes.debug) console.error(`${Autoroutes.name}: File type not supported... yet.`);
         return;
     }
@@ -133,7 +133,7 @@ function navigate(route, data) {
     const fixedPath = route.charAt(0) === '/' ? route : '/' + route; // Allows to omit leading "/"
     NAVIGATION_EVENT.path = fixedPath;
 
-    const fixedData = data !== undefined ? data : Autoroutes.draftData;
+    const fixedData = data !== undefined && data !== null ? data : Autoroutes.draftData;
     history.pushState(fixedData, '', fixedPath);
 
     // Ensure no data might be accidentally added in next navigation
@@ -160,7 +160,7 @@ function getData() {
 // ======================================================================================
 function validatePath(route) {
     // Only accept the `/` relative path prefix or no prefix at all
-    const pathRegExp = new RegExp(/^(\/?:?[.a-zA-Z0-9-]*\/?)+$/);
+    const pathRegExp = new RegExp(`^(\/?${Autoroutes.wildcardChar}?[.a-zA-Z0-9-]*\/?)+$`);
     const isValidPath = pathRegExp.test(route);
     if (!isValidPath && Autoroutes.debug) console.error(`${Autoroutes.name}: Specified route is not valid, it might contain invalid characters. Relative paths prefixes other than / aren't allowed (yet).`)
 
@@ -170,43 +170,66 @@ function validatePath(route) {
 function getFilePath(routeArray, currentPathValue = Autoroutes.routes) {
     // Recursively go through the Autoroutes.routes object to find view's file path from the route
     const route = routeArray[0];
-    if (typeof currentPathValue === 'string' && routeArray.length === 1 && routeArray[0].length === 0) return currentPathValue;
+    if (typeof currentPathValue === 'string' && routeArray.length === 1 && routeArray[0].length === 0) return currentPathValue; // Trailing "/", path is complete
     if (route.length === 0) return getFilePath(routeArray.slice(1), currentPathValue); // Allows leading "/" in routes
 
     let newPathValue = currentPathValue[route];
-    let wildcardRoute = '';
+
+    // Check malformated route
     if (newPathValue === null || Array.isArray(newPathValue) || (typeof newPathValue !== 'object' && typeof newPathValue !== 'string') && newPathValue !== undefined) {
         if (Autoroutes.debug) console.error(`${Autoroutes.name}: Route mismatch, routes must be either a file path (string) or an object containing file paths/nested file paths. \nReceived the following value:`, currentPathValue);
         return;
     }
+
+    // Handle wildcard & 404
+    let wildcardRoute = '';
     if (newPathValue === undefined && typeof currentPathValue === 'object') {
         wildcardRoute = Object.keys(currentPathValue).find(key => key.charAt(0) === Autoroutes.wildcardChar);
         if (wildcardRoute) {
+            // Only first wildcard will be caught
+            // TODO handle multiple wildcards at same level
             newPathValue = currentPathValue[wildcardRoute];
             Autoroutes.wildcards.push({name: wildcardRoute, value: route});
         }
-        else if (Autoroutes.routes.fallback) newPathValue = Autoroutes.routes.fallback;
-        else if (Autoroutes.routes.default) newPathValue = Autoroutes.routes.default;
+        else if (Autoroutes.routes.fallback) newPathValue = Autoroutes.routes.fallback; // 404
+        else if (Autoroutes.routes.default) newPathValue = Autoroutes.routes.default; // 404 isn't defined
         else {
             if (Autoroutes.debug) console.error(`${Autoroutes.name}: No fallback found for 404 routes.`);
             return;
         }
     }
     Autoroutes.route += `/${wildcardRoute || route}`;
-    if (routeArray.length === 1) return newPathValue;
-    else return getFilePath(routeArray.slice(1), newPathValue);
+
+    if (routeArray.length === 1) return newPathValue; // This was the last part of the route
+    else return getFilePath(routeArray.slice(1), newPathValue); // Go to next route part
 }
 
-function getNavigationPath() {
-    const urlPath = window.location.href.replace(Autoroutes.appPath, '');
-    return urlPath;
+async function loadJSView(viewRelativeUrl) {
+    // Import view from the JS file
+    await import(viewRelativeUrl).then(async view => {
+        const html = await view.default;
+        if (typeof html === 'string') {
+            MAIN_CONTAINER.innerHTML = html;
+            return;
+        }
+
+        MAIN_CONTAINER.innerHTML = ''; // Not in the beginning of the function because if the document is massive there would be a temporary blank view
+        if (Array.isArray(html)) {
+            MAIN_CONTAINER.append(...html);
+        }
+        else if (html instanceof Node || html instanceof Element || html instanceof Document || html instanceof DocumentFragment) {
+            MAIN_CONTAINER.append(html);
+        }
+    });
 }
 
-async function loadHTML(appPath, htmlFolder, htmlRelativeUrl) {
-    const VIEWS_PATH = '/' + htmlFolder;
-    const htmlUrl = new URL(VIEWS_PATH + htmlRelativeUrl, appPath).href;
+async function loadHTMLView(viewRelativeUrl) {
+    MAIN_CONTAINER.innerHTML = '';
+
+    // Fetches the view's HTML file and returns its content
+    const htmlUrl = new URL(viewRelativeUrl, Autoroutes.appPath).href;
     const response = await fetch(htmlUrl);
-    return await response.text();
+    MAIN_CONTAINER.innerHTML = await response.text();
 }
 
 function loadScripts() {
