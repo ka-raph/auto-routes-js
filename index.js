@@ -38,14 +38,6 @@ const NAVIGATION_EVENT = new Event(EVENT_NAME, {
     composed: false
 });
 
-const MAIN_CONTAINER = document.getElementById(Autoroutes.viewsContainerId);
-const EVENT_NAME = 'routerEvent';
-const NAVIGATION_EVENT = new Event(EVENT_NAME, {
-    bubbles: true,
-    cancelable: true,
-    composed: false
-});
-
 
 // ======================================================================================
 // ==                                                                                  ==
