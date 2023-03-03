@@ -57,7 +57,7 @@ function start(config) {
         if (Autoroutes.debug) console.error(`${Autoroutes.name}: Default route is not a valid string.`);
         return;
     }
-    Autoroutes.mountView(getNavigationPath());
+    Autoroutes.mountView(window.location.pathname);
 }
 
 function addListeners() {
@@ -84,7 +84,7 @@ function addListeners() {
     });
 
     // Listen to manual navigation ie. mouse navigation shortcut
-    window.addEventListener('popstate', (event) => Autoroutes.mountView(getNavigationPath()));
+    window.addEventListener('popstate', (event) => Autoroutes.mountView(window.location.pathname));
 }
 
 async function mountView(route) {
@@ -118,7 +118,7 @@ async function mountView(route) {
             MAIN_CONTAINER.innerHTML = await view.default;
         });
     }
-    else {
+    else { // TODO, add possibility to use a custom parser
         if (Autoroutes.debug) console.error(`${Autoroutes.name}: File type not supported... yet.`);
         return;
     }
@@ -203,11 +203,6 @@ function getFilePath(routeArray, currentPathValue = Autoroutes.routes) {
 
     if (routeArray.length === 1) return newPathValue; // This was the last part of the route
     else return getFilePath(routeArray.slice(1), newPathValue); // Go to next route part
-}
-
-function getNavigationPath() {
-    const urlPath = window.location.href.replace(Autoroutes.appPath, ''); // TODO why not window.location.pathname?
-    return urlPath;
 }
 
 async function loadHTML(appPath, htmlFolder, htmlRelativeUrl) {
