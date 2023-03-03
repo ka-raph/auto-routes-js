@@ -68,7 +68,7 @@ function addListeners() {
             const targetRouterLink = event.target.nodeName === Autoroutes.tagName.toUpperCase() ? event.target : event.target.closest(Autoroutes.tagName);
             let data = "null";
             try {
-                data = JSON.parse(targetRouterLink.getAttribute('pathData') ?? "null");
+                data = JSON.parse(targetRouterLink.getAttribute('pathData') ?? "null"); // TODO remove oathData attribute
             } 
             catch(e) {
                 if (Autoroutes.debug) console.error(`${Autoroutes.name}: Could not parse data to set navigation state. Data value received:`, data, 'Standard error:', e);
@@ -101,6 +101,7 @@ async function mountView(route) {
     Autoroutes.route = '';
     Autoroutes.wildcards = [];
     let path = getFilePath(fixedRoute.split('/'));
+    Autoroutes.route = Autoroutes.route.replace('/', ''); // First dash shouldn't be shown
     if (!path) {
         if (Autoroutes.debug) console.error(`${Autoroutes.name}: The error above was triggered because of path.`, route);
         return;
@@ -217,7 +218,7 @@ async function loadJSView(viewRelativeUrl) {
         if (Array.isArray(html)) {
             MAIN_CONTAINER.append(...html);
         }
-        else if (html instanceof Element || html instanceof Document || html instanceof DocumentFragment) {
+        else if (html instanceof Node || html instanceof Element || html instanceof Document || html instanceof DocumentFragment) {
             MAIN_CONTAINER.append(html);
         }
     });
