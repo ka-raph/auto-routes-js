@@ -30,6 +30,13 @@ for (const [property, value] of Object.entries(readOnlyProperties)) Object.defin
 
 export default Autoroutes;
 
+const MAIN_CONTAINER = document.getElementById(Autoroutes.viewsContainerId);
+const EVENT_NAME = 'routerEvent';
+const NAVIGATION_EVENT = new Event(EVENT_NAME, {
+    bubbles: true,
+    cancelable: true,
+    composed: false
+});
 
 const MAIN_CONTAINER = document.getElementById(Autoroutes.viewsContainerId);
 const EVENT_NAME = 'routerEvent';
