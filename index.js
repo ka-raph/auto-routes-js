@@ -3,7 +3,7 @@ const Autoroutes = {
     afterNavigation: async () => true,
     routes: {},
     appPath: window.location.origin,
-    htmlFolder: '',
+    baseFolder: '/',
     wildcards: [],
     route: '',
     viewsContainerId: 'autoroutes-view',
@@ -45,7 +45,8 @@ const NAVIGATION_EVENT = new Event(EVENT_NAME, {
 // ==                                     METHODS                                      ==
 // ==                                                                                  ==
 // ======================================================================================
-function start(config) {
+function start(config) { // TODO validate config
+    if (config.baseFolder !== undefined) config.baseFolder.charAt(0) === '/' ? config.baseFolder : '/' + config.baseFolder;
     Object.assign(Autoroutes, config);
     window.Autoroutes = Autoroutes;
     Autoroutes.addListeners();
@@ -67,7 +68,7 @@ function addListeners() {
             const targetRouterLink = event.target.nodeName === Autoroutes.tagName.toUpperCase() ? event.target : event.target.closest(Autoroutes.tagName);
             let data = "null";
             try {
-                data = JSON.parse(targetRouterLink.getAttribute('pathData') ?? "null");
+                data = JSON.parse(targetRouterLink.getAttribute('pathData') ?? "null"); // TODO remove oathData attribute
             } 
             catch(e) {
                 if (Autoroutes.debug) console.error(`${Autoroutes.name}: Could not parse data to set navigation state. Data value received:`, data, 'Standard error:', e);
@@ -100,6 +101,7 @@ async function mountView(route) {
     Autoroutes.route = '';
     Autoroutes.wildcards = [];
     let path = getFilePath(fixedRoute.split('/'));
+    Autoroutes.route = Autoroutes.route.replace('/', ''); // First dash shouldn't be shown
     if (!path) {
         if (Autoroutes.debug) console.error(`${Autoroutes.name}: The error above was triggered because of path.`, route);
         return;
@@ -109,14 +111,12 @@ async function mountView(route) {
     cleanScripts();
 
     // Mount view
+    const fixedPath = Autoroutes.baseFolder + path;
     if (path.match(/\.html/)) {
-        MAIN_CONTAINER.innerHTML = await loadHTML(Autoroutes.appPath, Autoroutes.htmlFolder, path);
+        await loadHTMLView(fixedPath);
     }
     else if (path.match(/\.js/)) {
-        MAIN_CONTAINER.innerHTML = '';
-        await import(importRoute).then(async view => {
-            MAIN_CONTAINER.innerHTML = await view.default;
-        });
+        await loadJSView(fixedPath);
     }
     else { // TODO, add possibility to use a custom parser
         if (Autoroutes.debug) console.error(`${Autoroutes.name}: File type not supported... yet.`);
@@ -205,12 +205,32 @@ function getFilePath(routeArray, currentPathValue = Autoroutes.routes) {
     else return getFilePath(routeArray.slice(1), newPathValue); // Go to next route part
 }
 
-async function loadHTML(appPath, htmlFolder, htmlRelativeUrl) {
+async function loadJSView(viewRelativeUrl) {
+    // Import view from the JS file
+    await import(viewRelativeUrl).then(async view => {
+        const html = await view.default;
+        if (typeof html === 'string') {
+            MAIN_CONTAINER.innerHTML = html;
+            return;
+        }
+
+        MAIN_CONTAINER.innerHTML = ''; // Not in the beginning of the function because if the document is massive there would be a temporary blank view
+        if (Array.isArray(html)) {
+            MAIN_CONTAINER.append(...html);
+        }
+        else if (html instanceof Node || html instanceof Element || html instanceof Document || html instanceof DocumentFragment) {
+            MAIN_CONTAINER.append(html);
+        }
+    });
+}
+
+async function loadHTMLView(viewRelativeUrl) {
+    MAIN_CONTAINER.innerHTML = '';
+
     // Fetches the view's HTML file and returns its content
-    const VIEWS_PATH = '/' + htmlFolder;
-    const htmlUrl = new URL(VIEWS_PATH + htmlRelativeUrl, appPath).href;
+    const htmlUrl = new URL(viewRelativeUrl, Autoroutes.appPath).href;
     const response = await fetch(htmlUrl);
-    return await response.text();
+    MAIN_CONTAINER.innerHTML = await response.text();
 }
 
 function loadScripts() {
