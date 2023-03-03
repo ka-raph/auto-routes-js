@@ -1,5 +1,5 @@
 # auto-routes-js
-*v1.1.0*
+[![NPM version][npm-badge]][npm-url]
 
 A basic but configurable client-side router. The SPA experience in vanilla JS and HTML and with no hassle due to a huge framework.
 
@@ -250,3 +250,8 @@ Default: `""`
 The base path to be prepended to the URL to fetch the HTML template files. This can be useful if you serve all the static content from another folder than the main HTML file of your application. This is not needed if you only use JavaScript for the templating.
 
 Since you should serve your main file (say `/public/index.html`) as a catch-all route from your server, the path to the other HTML files will usually not resolve, you might then just want to catch all requests to the path `/src` for instance, and forward them to the `src` folder of your frontend application.
+
+
+
+[npm-badge]: https://img.shields.io/npm/v/auto-routes-js.svg?style=flat
+[npm-url]: https://www.npmjs.com/package/auto-routes-js
