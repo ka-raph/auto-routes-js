@@ -11,11 +11,11 @@ No other third-party dependencies, no bundler needed, no framework necessary, ju
 
 *If you do not want to use the CDN version, follow these steps AND the steps in either of the "NPM" subsections further below.*
 
-Create a file named `route.js` in `/src/routes.js`from which you export an object containing routes such as below:
+Create a file named `routes.js` in `/src/routes.js`from which you export an object containing routes such as below:
 ```javascript
 export default {
     default: '/views/welcome.html', // Mandatory. Use the full path if the backend doesn't serve this file by default
-    'welcome': '/views/welcome.html',
+    'welcome': '/views/welcome.html', // Don't use forward slashes as first character of the route name, i.e. don't use '/welcome'
     'about': '/views/about.html',
     'wildcard': {
         ':id': {
@@ -36,7 +36,7 @@ import routes from './routes.js';
 // Set the router's settings (none are mandatory), see the "Configuration" section further below
 const settings = {
     debug: false, // Setting this value to false will prevent Autoroutes to log anything, useful for production environments
-    htmlFolder: 'src',
+    baseFolder: 'src',
     appPath: 'http://localhost:5000'
 }
 
@@ -54,7 +54,7 @@ In your main HTML file, say `/public/index.html`, add a tag with the id `autorou
   <body>
     <header>Welcome to My Awesome SPA</header>
     <section id="autoroutes-view"></section>
-    <script src="https://www.unpkg.com/auto-routes-js@1.1.0/dist/Autoroutes-v1.1.0.min.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
+    <script src="https://www.unpkg.com/auto-routes-js@1.1.1/dist/Autoroutes-v1.1.1.min.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
     <script src="/src/index.js" type="module"></script>
   </body>
 </html>
@@ -98,10 +98,10 @@ import routes from './routes';
 You can use HTML and JS to create the template to be rendered for any route. Wichever you choose, it doesn't exclude the possibility to use the other as well, therefor you may have some routes that use a TML file for the template while some other may have a JavaScript file for that purpose.
 
 ### Routing links
-To navigate to another route, use the `<router-link></router-link>` element, it take two attributes: `to` and `pathData`.
+To navigate to another route, use the `<router-link></router-link>` element, it take two attributes: `to` and `pathData`. **NOTE: `pathData` will soon be deprecated**.
 
 `to` must be provided the target route's name (works with leading `\` and without it).
-`pathData` can be provided a stringified JavaScript object that will be passed to the next route. It will be accessible by calling `History.state` in your code.
+`pathData` (**Avoid if possible, will be deprecated**) can be provided a stringified JavaScript object that will be passed to the next route. It will be accessible by calling `History.state` in your code.
 
 **HTML example:**
 
@@ -159,7 +159,8 @@ export default {
 ```
 
 #### JavaScript
-You want to implement the same counter as above, for that you can create `counter.js`:
+**You can export views as a `string` containing a HTML template such as `"<p><g>Hello!</g></p>"` or as an Array containing valid [Node](https://developer.mozilla.org/en-US/docs/Web/API/Node) | [Element](https://developer.mozilla.org/en-US/docs/Web/API/Element) | [Document](https://developer.mozilla.org/en-US/docs/Web/API/Document) | [DocumentFragment](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment).**
+One way to implement the same counter as above in a JavaScript file, for that you can create `counter.js`:
 
 ```javascript
 const container = document.createElement('div');
@@ -178,7 +179,7 @@ btn.onclick = () => {
 }
 
 // The container will be appended by the Router
-export default container; // Note that only one top-level node must be exported for the Router. Multiple Nodes appending from JS template will soon be available.
+export default container;
 ```
 
 Then add it to your `routes.js` file:
@@ -192,6 +193,8 @@ export default {
 
 
 ## Configuration
+**NOTE: you can both read and write the configuration properties of the Autoroute object, but it it recommended to avoid changing them after starting Autoroute.**
+
 Some settings can be used to override the router's defaults. You can do so by passing them in an object as second parameter of the `start(routes, settings)` function of the Router, eg. in your `/src/index.js`:
 ```javascript
 import routes from './routes';
@@ -200,7 +203,7 @@ import { updateUserData } from './services/user';
 
 // Set the router's settings (none are mandatory), see the "Configuration" section further below
 const settings = {
-    htmlFolder: 'src',
+    baseFolder: 'src',
     appPath: process.env.NODE_ENV,
     beforeNavigation: () => {
         if (!checkAuthenticated()) return false;
@@ -211,6 +214,15 @@ const settings = {
 // Start the router
 Router.start({routes, ...settings});
 ```
+
+### `routes`
+Type: `object`
+
+Default: `{}`
+
+**Required**
+
+This is the main entry for Autoroutes, this will generate the paths and display views from the specified routes.
 
 ### `beforeNavigation`
 Type: `async function | function`
@@ -234,6 +246,13 @@ Return value: `any`, this is not used.
 
 Can be used to run custom code post-navigation, eg. data updates. This will run before the new scripts from the newly added template if you use HTML files, else if you use JS files for templating, this will run after the template is updated
 
+### `debug`
+Type: *boolean*
+
+Default: `true`
+
+Will print errors encoutered by Autoroutes in the console if set to `true`, nothing will be printed if `false` making debugging a bit more complicated.
+
 ### `appPath`
 Type: *string*
 
@@ -241,16 +260,102 @@ Default: `window.location.origin`
 
 The [origin](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Origin) of the web app. Defaults to the current URL's origin.
 
-
-### `htmlFolder`
+### `viewsContainerId`
 Type: *string*
 
-Default: `""`
+Default: `autoroutes-view`
 
-The base path to be prepended to the URL to fetch the HTML template files. This can be useful if you serve all the static content from another folder than the main HTML file of your application. This is not needed if you only use JavaScript for the templating.
+The main container's id in which all your views will be rendered, **this setting is not mandatory but having a container with this id in your main HTML file is mandatory**.
 
-Since you should serve your main file (say `/public/index.html`) as a catch-all route from your server, the path to the other HTML files will usually not resolve, you might then just want to catch all requests to the path `/src` for instance, and forward them to the `src` folder of your frontend application.
+### `wildcardChar`
+Type: *string*
 
+Default: `:`
+
+**This must be 1 character only!** character used for declaring dynamic routes.
+
+### `tagName`
+Type: *string*
+
+Default: `router-link`
+
+**This must be at least two words separated by a single dash! (see [custom elements](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements))** Tag name of Autoroutes navigation links. *Override only if you know what you're doing*.
+
+### `scriptsClass`
+Type: *string*
+
+Default: `autoroutes-script`
+
+Class added to the scripts from your views, used internally to clean views scripts from the page when the views are removed. *Override only if you know what you're doing*.
+
+### `baseFolder`
+Type: *string*
+
+Default: `"/"`
+
+The base path to be prepended to the URL to fetch the view files. Leave blank if you serve all the static content from the same folder as the main HTML file of your application.
+
+Since you should serve your main file (say `/public/index.html`) as a catch-all route from your server, the path to the other view files will usually not resolve, you might then just want to catch all requests to the path `/src` for instance, and forward them to the `src` folder of your frontend application, then you should set `baseFolder` to `/src`. For nested folders: if all your views are under `/src/views` in your folder structure for instance, you might as well set `baseFolder` to `/src/views`.
+
+
+## API
+All of the following properties and methods can be accessed from the global object `Autoroutes` once Autoroutes is started. For instance you can call `Autoroutes.route` to get the current route.
+
+### `setData(data)`
+Type: `function`
+
+*readonly*
+
+Parameters:
+ * `data` (*any*): Data to be passed to next view, can be retrieved in *current* view using `Autoroutes.draftData` and can be retrieved in next view by using `Autoroutes.getData()`.
+
+Returns: `undefined`
+
+### `getData()`
+Type: `function`
+
+*readonly*
+
+Parameters: none
+
+Returns: The data you set in the previous view using `setData(data)`. As the data is saved in the [History](https://developer.mozilla.org/en-US/docs/Web/API/History/state), it can be retrieved when the user navigates through their current session's history as well.
+
+### `draftData`
+Type: `string`
+
+Default value: `null`
+
+Returns the current data that will be sent to the next view. *To be honest you could just override this value instead of using `setData(data)` but it's cooler to call a function, thank you React...*
+
+### `route`
+Type: `string`
+
+Default value: `""`
+
+Returns the current route as declared in your routes configuration with a `/` separator between each level.
+
+### `wildcards`
+Type: Array of objects `{name: string, value: string}`
+
+Default: `[]`
+
+Returns a list of all the wilcards on the current route with their value. For example for a URL path `/user/1234/transactions/abc123` corresponding to the route `/user/:id/transactions/:transactionId`, this would return `[{name: ':id', value: '1234'}, {name: ':transactionId', value: 'abc123'}]`. **You should avoid mutating that value.**
+
+### `name`
+Type: `string`
+
+*readonly*
+
+Default: `Autoroutes`
+
+Returns the name of the router.
+
+### `version`
+Type: `string`
+
+*readonly*
+
+Returns the version number of this library.
 
 
 [npm-badge]: https://img.shields.io/npm/v/auto-routes-js.svg?style=flat
