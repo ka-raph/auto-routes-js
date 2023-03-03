@@ -14,7 +14,15 @@
     "router",
     "routes",
     "routing",
-    "spa"
+    "mount",
+    "view",
+    "path",
+    "spa",
+    "javascript",
+    "js",
+    "auto-routes",
+    "vanilla",
+    "auto"
   ],
   "author": "Raphaël Karampournis",
   "license": "ISC",
