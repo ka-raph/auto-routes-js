@@ -65,9 +65,9 @@ function addListeners() {
     document.addEventListener('click', event => {
         if (event.target && event.target.nodeType && event.target.matches(`${Autoroutes.tagName}, ${Autoroutes.tagName} *`)) {
             const targetRouterLink = event.target.nodeName === Autoroutes.tagName.toUpperCase() ? event.target : event.target.closest(Autoroutes.tagName);
-            let data = null;
+            let data = "null";
             try {
-                data = JSON.parse(targetRouterLink.getAttribute('pathData') ?? null);
+                data = JSON.parse(targetRouterLink.getAttribute('pathData') ?? "null");
             } 
             catch(e) {
                 if (Autoroutes.debug) console.error(`${Autoroutes.name}: Could not parse data to set navigation state. Data value received:`, data, 'Standard error:', e);
@@ -134,7 +134,7 @@ function navigate(route, data) {
     const fixedPath = route.charAt(0) === '/' ? route : '/' + route; // Allows to omit leading "/"
     NAVIGATION_EVENT.path = fixedPath;
 
-    const fixedData = data !== undefined ? data : Autoroutes.draftData;
+    const fixedData = data !== undefined && data !== null ? data : Autoroutes.draftData;
     history.pushState(fixedData, '', fixedPath);
 
     // Ensure no data might be accidentally added in next navigation
