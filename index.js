@@ -99,9 +99,6 @@ async function mountView(route) {
         return;
     }
 
-    // Remove current view's scripts
-    cleanScripts();
-
     // Mount view
     const fixedPath = Autoroutes.baseFolder + path;
     if (path.match(/\.html/)) {
@@ -117,9 +114,6 @@ async function mountView(route) {
 
     // Post-rendering hook
     await Autoroutes.afterNavigation();
-
-    // Add and run the wiew's scripts
-    loadScripts();
 }
 
 function navigate(route, data) {
@@ -217,37 +211,16 @@ async function loadJSView(viewRelativeUrl) {
 }
 
 async function loadHTMLView(viewRelativeUrl) {
-    MAIN_CONTAINER.innerHTML = '';
-
     // Fetches the view's HTML file and returns its content
     const htmlUrl = new URL(viewRelativeUrl, Autoroutes.appPath).href;
     const response = await fetch(htmlUrl);
-    MAIN_CONTAINER.innerHTML = await response.text();
-}
+    const viewHtml = await response.text();
 
-function loadScripts() {
-    // Appending a script like this doesn't work by default, it won't run the script
-    const scripts = document.querySelectorAll(`#${Autoroutes.viewsContainerId} script`);
+    // Create document Fragment, this can allow sripts to run
+    const range = document.createRange();
+    range.selectNode(MAIN_CONTAINER);
+    const documentFragment = range.createContextualFragment(viewHtml);
 
-    scripts.forEach(script => {
-        script.classList.add(Autoroutes.scriptsClass);
-        const jscript = script.outerHTML;
-
-        // Remove the current script
-        script.parentElement.removeChild(script);
-
-        // Create document fragment that'll add and run the script
-        const range = document.createRange();
-        range.selectNode(document.getElementsByTagName("BODY")[0]);
-        const documentFragment = range.createContextualFragment(jscript);
-        document.head.appendChild(documentFragment); // TODO, use this methodology to append the whole file instead of loading it as a string?
-    })
-}
-
-function cleanScripts() {
-    const scripts = document.querySelectorAll(`head ${Autoroutes.scriptsClass}`);
-
-    scripts.forEach(script => {
-        script.parentNode.removeChild(script);
-    })
+    MAIN_CONTAINER.innerHTML = '';
+    MAIN_CONTAINER.appendChild(documentFragment);
 }
