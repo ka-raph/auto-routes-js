@@ -65,16 +65,9 @@ function addListeners() {
     document.addEventListener('click', event => {
         if (event.target && event.target.nodeType && event.target.matches(`${Autoroutes.tagName}, ${Autoroutes.tagName} *`)) {
             const targetRouterLink = event.target.nodeName === Autoroutes.tagName.toUpperCase() ? event.target : event.target.closest(Autoroutes.tagName);
-            let data = "null";
-            try {
-                data = JSON.parse(targetRouterLink.getAttribute('pathData') ?? "null"); // TODO remove oathData attribute
-            } 
-            catch(e) {
-                if (Autoroutes.debug) console.error(`${Autoroutes.name}: Could not parse data to set navigation state. Data value received:`, data, 'Standard error:', e);
-            }
             const path = targetRouterLink.getAttribute('to');
 
-            navigate(path, data);
+            navigate(path);
         }
     });
 
