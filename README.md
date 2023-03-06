@@ -54,7 +54,7 @@ In your main HTML file, say `/public/index.html`, add a tag with the id `autorou
   <body>
     <header>Welcome to My Awesome SPA</header>
     <section id="autoroutes-view"></section>
-    <script src="https://www.unpkg.com/auto-routes-js@1.1.1/dist/Autoroutes-v1.1.1.min.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
+    <script src="https://www.unpkg.com/auto-routes-js@1.1.2/dist/Autoroutes-v1.1.2.min.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
     <script src="/src/index.js" type="module"></script>
   </body>
 </html>
@@ -98,22 +98,20 @@ import routes from './routes';
 You can use HTML and JS to create the template to be rendered for any route. Wichever you choose, it doesn't exclude the possibility to use the other as well, therefor you may have some routes that use a TML file for the template while some other may have a JavaScript file for that purpose.
 
 ### Routing links
-To navigate to another route, use the `<router-link></router-link>` element, it take two attributes: `to` and `pathData`. **NOTE: `pathData` will soon be deprecated**.
+To navigate to another route, use the `<router-link></router-link>` element, it take on attribute: `to`.
 
 `to` must be provided the target route's name (works with leading `\` and without it).
-`pathData` (**Avoid if possible, will be deprecated**) can be provided a stringified JavaScript object that will be passed to the next route. It will be accessible by calling `History.state` in your code.
 
 **HTML example:**
 
 ```html
-<router-link to="/cart" pathData="{isLoggedIn: false}"><button>View Cart</button></router-link>
+<router-link to="/cart"><button>View Cart</button></router-link>
 ```
 
 **JavaScript example:**
 ```javascript
 const routerLink = document.createElement('router-link');
 routerLink.setAttribute('to', '/cart');
-routerLink.setAttribute('pathData', JSON.stringify({isLoggedIn: false}));
 routerLink.innerHTML = '<button>View Cart</button>';
 
 const selector = document.querySelector('#modal-footer');
