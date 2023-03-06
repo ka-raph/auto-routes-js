@@ -83,6 +83,7 @@ function addListeners() {
 async function mountView(route) {
     // Allow to run auth checks for instance
     if (await Autoroutes.beforeNavigation() === false) return;
+
     // Check path validity before continuing
     if (!validatePath(route)) return;
 
@@ -127,7 +128,6 @@ function navigate(route, data) {
     setData(null);
 
     document.dispatchEvent(NAVIGATION_EVENT);
-    mountView(route)
 }
 
 function setData(data = {}) {
