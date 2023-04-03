@@ -108,8 +108,12 @@ async function mountView(route) {
     else if (path.match(/\.js/)) {
         await loadJSView(fixedPath);
     }
-    else { // TODO, add possibility to use a custom parser
-        if (Autoroutes.debug) console.error(`${Autoroutes.name}: File type not supported... yet.`);
+    else if (Autoroutes.customParser !== null && path.match(Autoroutes.customParser.pattern)) {
+        if (!validateCustomParser(fixedPath)) return;    
+        await loadCustomView(fixedPath)
+    }
+    else {
+        if (Autoroutes.debug) console.error(`${Autoroutes.name}: File type not supported... yet. Try setting up a parser for this file's type ${fixedPath}`);
         return;
     }
 
@@ -223,4 +227,29 @@ async function loadHTMLView(viewRelativeUrl) {
 
     MAIN_CONTAINER.innerHTML = '';
     MAIN_CONTAINER.appendChild(documentFragment);
+}
+
+async function loadCustomView(viewRelativeUrl) {
+    // Fetches the view's HTML file and returns its content
+    const fileUrl = new URL(viewRelativeUrl, Autoroutes.appPath).href;
+    const response = await fetch(fileUrl);
+    const viewString = await response.text();
+    const viewParsed = await Autoroutes.customParser.parse(viewString);
+
+    // Create document Fragment, this can allow sripts to run
+    const range = document.createRange();
+    range.selectNode(MAIN_CONTAINER);
+    const documentFragment = range.createContextualFragment(viewParsed);
+
+    MAIN_CONTAINER.innerHTML = '';
+    MAIN_CONTAINER.appendChild(documentFragment);
+}
+
+function validateCustomParser(fixedPath) {
+    const parserErrors = [];
+    const customParser = Autoroutes.customParser;
+    if (customParser.pattern && typeof customParser.pattern !== 'string' && !(customParser.pattern instanceof RegExp)) parserErrors.push(`${Autoroutes.name}: Pattern for custom parser is not valid.`);
+    if (typeof customParser.parse !== 'function') parserErrors.push(`${Autoroutes.name}: Custom parser is not a valid function.`);
+    if (parserErrors && Autoroutes.debug) console.error(`${Autoroutes.name}: One or more errors happened when using the provided parser for the file ${fixedPath}.`, ...parserErrors);
+    return parserErrors.length === 0;
 }
