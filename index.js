@@ -11,7 +11,8 @@ const Autoroutes = {
     tagName: 'router-link',
     scriptsClass: 'autoroutes-script',
     debug: true,
-    draftData: null
+    draftData: null,
+    parsers: null
 }
 
 // Some methods must be immutable
@@ -108,13 +109,17 @@ async function mountView(route) {
     else if (path.match(/\.js/)) {
         await loadJSView(fixedPath);
     }
-    else if (Autoroutes.customParser !== null && path.match(Autoroutes.customParser.pattern)) {
-        if (!validateCustomParser(fixedPath)) return;    
-        await loadCustomView(fixedPath)
-    }
     else {
-        if (Autoroutes.debug) console.error(`${Autoroutes.name}: File type not supported... yet. Try setting up a parser for this file's type ${fixedPath}`);
-        return;
+        let hasParser = false;
+        for (const customParser of Autoroutes.parsers) {
+            if (!path.match(customParser.pattern)) continue;
+            if (!validateCustomParser(fixedPath, customParser)) return;
+
+            hasParser = true;
+            await loadCustomView(fixedPath, customParser)
+            break;
+        }
+        if (!hasParser && Autoroutes.debug) return console.error(`${Autoroutes.name}: File type not supported... yet. Try setting up a parser for this file's type ${fixedPath}`);
     }
 
     // Post-rendering hook
@@ -229,27 +234,39 @@ async function loadHTMLView(viewRelativeUrl) {
     MAIN_CONTAINER.appendChild(documentFragment);
 }
 
-async function loadCustomView(viewRelativeUrl) {
+async function loadCustomView(viewRelativeUrl, customParser) { // TODORAF refactor with JS loading function above
     // Fetches the view's HTML file and returns its content
     const fileUrl = new URL(viewRelativeUrl, Autoroutes.appPath).href;
     const response = await fetch(fileUrl);
     const viewString = await response.text();
-    const viewParsed = await Autoroutes.customParser.parse(viewString);
+    const viewParsed = await customParser.parse(viewString);
+    let contentToAppend = null;
 
-    // Create document Fragment, this can allow sripts to run
-    const range = document.createRange();
-    range.selectNode(MAIN_CONTAINER);
-    const documentFragment = range.createContextualFragment(viewParsed);
+    if (typeof viewParsed === 'string') {
+        // Create document Fragment, this can allow sripts to run
+        const range = document.createRange();
+        range.selectNode(MAIN_CONTAINER);
+        contentToAppend = [range.createContextualFragment(viewParsed)];
+    }
+    else if (Array.isArray(viewParsed)) {
+        contentToAppend = [...viewParsed];
+    }
+    else if (viewParsed instanceof Node || viewParsed instanceof Element || viewParsed instanceof Document || viewParsed instanceof DocumentFragment) {
+        contentToAppend = [viewParsed];
+    }
+    else {
+        // TODORAF handle that case
+        return;
+    }
 
     MAIN_CONTAINER.innerHTML = '';
-    MAIN_CONTAINER.appendChild(documentFragment);
+    MAIN_CONTAINER.append(...contentToAppend);
 }
 
-function validateCustomParser(fixedPath) {
+function validateCustomParser(fixedPath, customParser) {
     const parserErrors = [];
-    const customParser = Autoroutes.customParser;
     if (customParser.pattern && typeof customParser.pattern !== 'string' && !(customParser.pattern instanceof RegExp)) parserErrors.push(`${Autoroutes.name}: Pattern for custom parser is not valid.`);
     if (typeof customParser.parse !== 'function') parserErrors.push(`${Autoroutes.name}: Custom parser is not a valid function.`);
-    if (parserErrors && Autoroutes.debug) console.error(`${Autoroutes.name}: One or more errors happened when using the provided parser for the file ${fixedPath}.`, ...parserErrors);
+    if (parserErrors.length > 0 && Autoroutes.debug) console.error(`${Autoroutes.name}: One or more errors happened when using the provided parser for the file ${fixedPath}.`, ...parserErrors);
     return parserErrors.length === 0;
 }
