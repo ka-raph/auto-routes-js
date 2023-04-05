@@ -54,7 +54,7 @@ In your main HTML file, say `/public/index.html`, add a tag with the id `autorou
   <body>
     <header>Welcome to My Awesome SPA</header>
     <section id="autoroutes-view"></section>
-    <script src="https://www.unpkg.com/auto-routes-js@1.1.3/dist/Autoroutes-v1.1.3.min.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
+    <script src="https://www.unpkg.com/auto-routes-js@1.2.0/dist/Autoroutes-v1.2.0.min.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
     <script src="/src/index.js" type="module"></script>
   </body>
 </html>
