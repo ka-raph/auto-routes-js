@@ -9,9 +9,9 @@ const Autoroutes = {
     viewsContainerId: 'autoroutes-view',
     wildcardChar: ':',
     tagName: 'router-link',
-    scriptsClass: 'autoroutes-script',
     debug: true,
-    draftData: null
+    draftData: null,
+    parsers: null
 }
 
 // Some methods must be immutable
@@ -23,11 +23,11 @@ const readOnlyProperties = {
     setData,
     start,
     name: 'Autoroutes',
-    version: '1.1.3'
+    version: '1.2.0'
 }
 for (const [property, value] of Object.entries(readOnlyProperties)) Object.defineProperty(Autoroutes, property, {value, writable: false});
 
-
+window.Autoroutes = Autoroutes;
 export default Autoroutes;
 
 const MAIN_CONTAINER = document.getElementById(Autoroutes.viewsContainerId);
@@ -103,14 +103,25 @@ async function mountView(route) {
     // Mount view
     const fixedPath = Autoroutes.baseFolder + path;
     if (path.match(/\.html/)) {
-        await loadHTMLView(fixedPath);
+        await loadViewFromFile(fixedPath);
     }
     else if (path.match(/\.js/)) {
         await loadJSView(fixedPath);
     }
-    else { // TODO, add possibility to use a custom parser
-        if (Autoroutes.debug) console.error(`${Autoroutes.name}: File type not supported... yet.`);
-        return;
+    else if (Autoroutes.parsers) {
+        let hasParser = false;
+        for (const customParser of Autoroutes.parsers) {
+            if (!path.match(customParser.pattern)) continue;
+            if (!validateCustomParser(fixedPath, customParser)) return;
+
+            hasParser = true;
+            await loadViewFromFile(fixedPath, customParser)
+            break;
+        }
+        if (!hasParser && Autoroutes.debug) return console.error(`${Autoroutes.name}: File type not supported... yet and no parser for this file type was found. Try setting up a parser for this file's type ${fixedPath}`);
+    }
+    else {
+        return console.error(`${Autoroutes.name}: File type not supported... yet. Try setting up a parser for this file's type ${fixedPath}`);
     }
 
     // Post-rendering hook
@@ -170,8 +181,9 @@ function getFilePath(routeArray, currentPathValue = Autoroutes.routes) {
 
     // Handle wildcard & 404
     let wildcardRoute = '';
-    if (newPathValue === undefined && typeof currentPathValue === 'object') {
-        wildcardRoute = Object.keys(currentPathValue).find(key => key.charAt(0) === Autoroutes.wildcardChar);
+    if (newPathValue === undefined) {
+        // currentPathValue can be `undefined` then it's a 404
+        wildcardRoute = typeof currentPathValue === 'object' ? Object.keys(currentPathValue).find(key => key.charAt(0) === Autoroutes.wildcardChar) : '';
         if (wildcardRoute) {
             // Only first wildcard will be caught
             // TODO handle multiple wildcards at same level
@@ -193,34 +205,68 @@ function getFilePath(routeArray, currentPathValue = Autoroutes.routes) {
 
 async function loadJSView(viewRelativeUrl) {
     // Import view from the JS file
-    await import(viewRelativeUrl).then(async view => {
-        const html = await view.default;
-        if (typeof html === 'string') {
-            MAIN_CONTAINER.innerHTML = html;
-            return;
-        }
-
-        MAIN_CONTAINER.innerHTML = ''; // Not in the beginning of the function because if the document is massive there would be a temporary blank view
-        if (Array.isArray(html)) {
-            MAIN_CONTAINER.append(...html);
-        }
-        else if (html instanceof Node || html instanceof Element || html instanceof Document || html instanceof DocumentFragment) {
-            MAIN_CONTAINER.append(html);
-        }
-    });
+    await import(viewRelativeUrl).then(async view => updateTemplate(view.default));
 }
 
-async function loadHTMLView(viewRelativeUrl) {
+async function loadViewFromFile(viewRelativeUrl, customParser) {
     // Fetches the view's HTML file and returns its content
-    const htmlUrl = new URL(viewRelativeUrl, Autoroutes.appPath).href;
-    const response = await fetch(htmlUrl);
-    const viewHtml = await response.text();
+    const fileUrl = new URL(viewRelativeUrl, Autoroutes.appPath).href;
+    const response = await fetch(fileUrl);
+    const viewString = await response.text();
+    if (customParser)  {
+        const viewParsed = await customParser.parse(viewString);
+        updateTemplate(viewParsed)
+    }
+    else {
+        // HTML, raw text...
+        updateTemplate(viewString);
+    }
+}
 
-    // Create document Fragment, this can allow sripts to run
-    const range = document.createRange();
-    range.selectNode(MAIN_CONTAINER);
-    const documentFragment = range.createContextualFragment(viewHtml);
+function updateTemplate(newTemplate) {
+    let contentToAppend = null;
 
-    MAIN_CONTAINER.innerHTML = '';
-    MAIN_CONTAINER.appendChild(documentFragment);
+    try {
+        if (typeof newTemplate === 'string') {
+            // Create document Fragment, this can allow sripts to run
+            const range = document.createRange();
+            range.selectNode(MAIN_CONTAINER);
+            contentToAppend = [range.createContextualFragment(newTemplate)];
+        }
+        else if (Array.isArray(newTemplate)) {
+            MAIN_CONTAINER.innerHTML = '';
+
+            // Arrays may contain items of different types, this allows mixing HTML strings and other Element/Node-like items. Ugly, but better than checking individually just for throwing an error if they're mixed
+            newTemplate.forEach(templateItem => {
+                if (typeof templateItem === 'string') {
+                    MAIN_CONTAINER.innerHTML += templateItem;
+                }
+                else if (newTemplate instanceof Node || newTemplate instanceof Element || newTemplate instanceof Document || newTemplate instanceof DocumentFragment) {
+                    MAIN_CONTAINER.append(templateItem)
+                }
+            });
+            return;
+        }
+        else if (newTemplate instanceof Node || newTemplate instanceof Element || newTemplate instanceof Document || newTemplate instanceof DocumentFragment) {
+            contentToAppend = [newTemplate];
+        }
+        else {
+            throw new Error(`${Autoroutes.name}: The received template must be a valid HTML string, Node, Element, Document, DocumentFragment or must be an array containing items of the previously listed types.`);
+        }
+
+        MAIN_CONTAINER.innerHTML = '';
+        MAIN_CONTAINER.append(...contentToAppend);
+    }
+    catch (e) {
+        console.error(e);
+        console.error(`${Autoroutes.name}: The error above occurred while trying to update the view.`);
+    }
+}
+
+function validateCustomParser(fixedPath, customParser) {
+    const parserErrors = [];
+    if (customParser.pattern && typeof customParser.pattern !== 'string' && !(customParser.pattern instanceof RegExp)) parserErrors.push(`${Autoroutes.name}: Pattern for custom parser is not valid.`);
+    if (typeof customParser.parse !== 'function') parserErrors.push(`${Autoroutes.name}: Custom parser is not a valid function.`);
+    if (parserErrors.length > 0 && Autoroutes.debug) console.error(`${Autoroutes.name}: One or more errors happened when using the provided parser for the file ${fixedPath}.`, ...parserErrors);
+    return parserErrors.length === 0;
 }
