@@ -9,6 +9,7 @@ const Autoroutes = {
     viewsContainerId: 'autoroutes-view',
     wildcardChar: ':',
     tagName: 'router-link',
+    scriptsClass: 'autoroutes-script',
     debug: true,
     draftData: null,
     parsers: null
@@ -27,7 +28,7 @@ const readOnlyProperties = {
 }
 for (const [property, value] of Object.entries(readOnlyProperties)) Object.defineProperty(Autoroutes, property, {value, writable: false});
 
-window.Autoroutes = Autoroutes;
+
 export default Autoroutes;
 
 const MAIN_CONTAINER = document.getElementById(Autoroutes.viewsContainerId);
@@ -108,7 +109,7 @@ async function mountView(route) {
     else if (path.match(/\.js/)) {
         await loadJSView(fixedPath);
     }
-    else if (Autoroutes.parsers) {
+    else {
         let hasParser = false;
         for (const customParser of Autoroutes.parsers) {
             if (!path.match(customParser.pattern)) continue;
@@ -118,10 +119,7 @@ async function mountView(route) {
             await loadViewFromFile(fixedPath, customParser)
             break;
         }
-        if (!hasParser && Autoroutes.debug) return console.error(`${Autoroutes.name}: File type not supported... yet and no parser for this file type was found. Try setting up a parser for this file's type ${fixedPath}`);
-    }
-    else {
-        return console.error(`${Autoroutes.name}: File type not supported... yet. Try setting up a parser for this file's type ${fixedPath}`);
+        if (!hasParser && Autoroutes.debug) return console.error(`${Autoroutes.name}: File type not supported... yet. Try setting up a parser for this file's type ${fixedPath}`);
     }
 
     // Post-rendering hook
