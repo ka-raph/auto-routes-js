@@ -12,7 +12,7 @@ No other third-party dependencies, no bundler needed, no framework necessary, ju
     * [NPM (no bundler)](#npm-no-bundler)
     * [NPM (with bundler)](#npm-with-bundler)
 * [Usage](#usage)
-    * [Routing links](routing-links)
+    * [Routing links](#routing-links)
     * [Templating](#templating)
         * [HTML](#html)
         * [JavaScript](#javascript)
