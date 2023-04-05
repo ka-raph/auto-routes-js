@@ -5,11 +5,53 @@ A basic but configurable client-side router. The SPA experience in vanilla JS an
 
 No other third-party dependencies, no bundler needed, no framework necessary, just that one library and you can easily create your own SPA!
 
+* [Install](#install)
+    * [CDN](#cdn)
+    * [NPM](#npm)
+* [Getting Started](#getting-started)
+    * [NPM (no bundler)](#npm-no-bundler)
+    * [NPM (with bundler)](#npm-with-bundler)
+* [Usage](#usage)
+    * [Routing links](#routing-links)
+    * [Templating](#templating)
+        * [HTML](#html)
+        * [JavaScript](#javascript)
+        * [Other file types](#other-file-types)
+* [Configuration](#configuration)
+* [API](#api)
+
 
 ## Install
-*Please note that the paths and folder structure in the examples below are merely suggestions, you are free to use your own structure.*
+### CDN
 
-*If you do not want to use the CDN version, follow these steps AND the steps in either of the "NPM" subsections further below.*
+In your main HTML file, say `/public/index.html`, add the CDN script before you main JavaScript file, such as:
+
+```html
+<!doctype html>
+<html>
+  <head>
+    <title>My Awesome SPA</title>
+  </head>
+  <body>
+    <header>Welcome to My Awesome SPA</header>
+    <section id="autoroutes-view"></section>
+    <!-- You can use unpkg or any other NPM to CDN service -->
+    <script src="https://www.unpkg.com/auto-routes-js@1.2.0/dist/Autoroutes-v1.2.0.min.js" type="module"></script>
+    <script src="/src/index.js" type="module"></script>
+  </body>
+</html>
+```
+
+
+### NPM
+Run:
+```
+npm install auto-routes-js
+```
+
+
+## Getting started
+*Please note that the paths and folder structure in the examples below are only suggestions, you are free to use your own structure.*
 
 Create a file named `routes.js` in `/src/routes.js`from which you export an object containing routes such as below:
 ```javascript
@@ -28,9 +70,27 @@ export default {
 };
 ```
 
+In your main HTML file, say `/public/index.html`, add add a tag with the id `autoroutes-view` and call the `index.js` you'll next create as a JavaScript module:
+
+```html
+<!doctype html>
+<html>
+  <head>
+    <title>My Awesome SPA</title>
+  </head>
+  <body>
+    <header>Welcome to My Awesome SPA</header>
+    <section id="autoroutes-view"></section>
+    <script src="https://www.unpkg.com/auto-routes-js@1.2.0/dist/Autoroutes-v1.2.0.min.js" type="module"></script>
+    <script src="/src/index.js" type="module"></script>
+  </body>
+</html>
+```
+
 Then create a file named `index.js` in `/src/index.js`, such as:
 
 ```javascript
+// The import statement for Autoroutes isn't necessary if you use the CDN version
 import routes from './routes.js';
 
 // Set the router's settings (none are mandatory), see the "Configuration" section further below
@@ -41,64 +101,36 @@ const settings = {
 }
 
 // Start the router
-Router.start({routes, ...settings});
+Autoroutes.start({routes, ...settings});
 ```
-
-In your main HTML file, say `/public/index.html`, add a tag with the id `autoroutes-view` and call the `index.js` you'll next create as a JavaScript module:
-```html
-<!doctype html>
-<html>
-  <head>
-    <title>My Awesome SPA</title>
-  </head>
-  <body>
-    <header>Welcome to My Awesome SPA</header>
-    <section id="autoroutes-view"></section>
-    <script src="https://www.unpkg.com/auto-routes-js@1.2.0/dist/Autoroutes-v1.2.0.min.js" type="module"></script> <!-- Remove that line if you don't use the CDN version -->
-    <script src="/src/index.js" type="module"></script>
-  </body>
-</html>
-```
-
 
 ### NPM (no bundler)
 **Only if your backend can serve the `node_modules` folder or if serving routes can be configured.**
 
-*Make sure you followed the steps of the "Install" section.*
-
-Run:
-```
-npm install auto-routes-js
-```
-
-If your server isn't serving the root folder of your frontend application but you can nonetheless configure it, add a route that serves the `node_modules` folder.
+If your server isn't serving the root folder of your frontend application but you can nonetheless configure it, add a route that serves the `node_modules` folder in your server.
 
 Just add the line below at the beginning of `/src/index.js` (make sure to fix the path):
 ```javascript
-import Router from '/path/to/node_modules/auto-routes-js/index.js';
+import Autoroutes from '/path/to/node_modules/auto-routes-js/index.js';
 ```
 
 
 ### NPM (with bundler)
-*Make sure you followed the steps of the "Install" section.*
-
-Run: 
-```
-npm install auto-routes-js
-```
-
-Add an import to the `auto-routes` module at the beginning of `/src/index.js` (make sure to fix the path) and for a cleaner code you can as well remove the `.js` extension from the other import, such as:
+Add an import to the `auto-routes-js` module at the beginning of `/src/index.js` (make sure to fix the path) and for a cleaner code you can as well remove the `.js` extension from the other import, such as:
 ```javascript
-import Router from '/path/to/node_modules/auto-routes-js';
+import Autoroutes from 'auto-routes-js';
 import routes from './routes';
 ```
 
 
 ## Usage
-You can use HTML and JS to create the template to be rendered for any route. Wichever you choose, it doesn't exclude the possibility to use the other as well, therefor you may have some routes that use a TML file for the template while some other may have a JavaScript file for that purpose.
+You can use HTML and JS to create the template to be rendered for any route out of the box, but it is also possible to configure Autoroutes.js to parse other file types. Wichever you choose, it doesn't exclude the possibility to mix the templating source types, therefore you may have some routes that use a HTML file for the template while some other may have a JavaScript file or a Markdown file for that purpose.
+
+*Autoroutes.js is very lightweight & fast and modern browsers usually lazy-load files if they've been previously fetched and that the content hasn't changed, therefore the views that the user has already visited will be loaded from memory on their browser by default. But this also means that extremely heavy template files might take a niticeable amount of time to load the first time your users's browser fetches them or if their connection or device aren't fast, especially if you use custom parsers. The [beforeNavigation](#beforenavigation) and [afterNavigation](#afterNavigation) hooks allow you to add for instance a loading screen to cover these scenarios.*
+
 
 ### Routing links
-To navigate to another route, use the `<router-link></router-link>` element, it take on attribute: `to`.
+To navigate to another route, use the `<router-link></router-link>` element, it takes one attribute: `to`.
 
 `to` must be provided the target route's name (works with leading `\` and without it).
 
@@ -119,9 +151,8 @@ selector.appendChild(routerLink); // Make sure you use a working selector
 ```
 
 ### Templating
-The prefferred way to render your app is to use HTML template in a file with the `.html` extension and refer to this file in the routes.
 
-But that doesn't prevent you from using JavaScript, and if you bundle your app, even TypeScript or JSX as long as your template files export valid HTML Nodes.
+You can use HTML and/or JavaScript out of the box with this router for templating your views. It is also possible to use any other file type such as `.md` but with some extra configuration as explained [further below](#other-file-types).
 
 
 #### HTML
@@ -135,7 +166,7 @@ It is not needed to add the whole boilerplate from a usual HTML file, instead yo
     Click count: <span id="count">0</span>
 </p>
 <button id="clickMe" onclick="incrementCount">Click Me!</button>
-<script> // You could refer to a script from an JavaScript file as well for a better separation of concerns
+<script> // You could refer to a script from a JavaScript file as well for a better separation of concerns
     const counter = document.getElementById('count');
     const btn = document.getElementById('clickMe');
     let count = 0;
@@ -157,7 +188,7 @@ export default {
 ```
 
 #### JavaScript
-**You can export views as a `string` containing a HTML template such as `"<p><g>Hello!</g></p>"` or as an Array containing valid [Node](https://developer.mozilla.org/en-US/docs/Web/API/Node) | [Element](https://developer.mozilla.org/en-US/docs/Web/API/Element) | [Document](https://developer.mozilla.org/en-US/docs/Web/API/Document) | [DocumentFragment](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment).**
+**You can export views as a `string` containing a HTML template such as `"<p><g>Hello!</g></p>"` or as an Array containing valid HTML template string | [Node](https://developer.mozilla.org/en-US/docs/Web/API/Node) | [Element](https://developer.mozilla.org/en-US/docs/Web/API/Element) | [Document](https://developer.mozilla.org/en-US/docs/Web/API/Document) | [DocumentFragment](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment).**
 One way to implement the same counter as above in a JavaScript file, for that you can create `counter.js`:
 
 ```javascript
@@ -189,12 +220,33 @@ export default {
 };
 ```
 
+#### Other file types
+You will need to provide the parser(s) for other file types to Autoroutes.js, here is an example Autoroutes.js configuration to create your views template from `.md` files using [Marked](https://marked.js.org/) (CDN import):
+
+```javascript
+import Autoroutes from 'auto-routes-js';
+import routes from './routes.js';
+
+const parsers = [ // This should always be an array, this allows you to use as many file parsers as you want
+    {
+        // `parse` must be a function with one parameter that returns a valid HTML string | Node | Element | Document | DocumentFragment
+        parse: mdString => marked.parse(mdString),
+        // `pattern` must be a valid Regular Expression (RegExp or string)
+        pattern: '.md$'
+    },
+];
+
+Autoroutes.start({routes, baseFolder: '/src', parsers});
+```
+
+Non-JavaScript file types are usually loaded as a string when the user's browser fetches them, make sure your parser takes a single string as an input.
 
 ## Configuration
-**NOTE: you can both read and write the configuration properties of the Autoroute object, but it it recommended to avoid changing them after starting Autoroute.**
+**NOTE: you can both read and write some of the configuration properties of the Autoroute object, but it is recommended to avoid changing them after starting Autoroute.**
 
 Some settings can be used to override the router's defaults. You can do so by passing them in an object as second parameter of the `start(routes, settings)` function of the Router, eg. in your `/src/index.js`:
 ```javascript
+import Autoroutes from 'auto-routes-js';
 import routes from './routes';
 import { checkAuthenticated } from './auth';
 import { updateUserData } from './services/user';
@@ -210,7 +262,7 @@ const settings = {
 }
 
 // Start the router
-Router.start({routes, ...settings});
+Autoroutes.start({routes, ...settings});
 ```
 
 ### `routes`
@@ -279,13 +331,6 @@ Default: `router-link`
 
 **This must be at least two words separated by a single dash! (see [custom elements](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements))** Tag name of Autoroutes navigation links. *Override only if you know what you're doing*.
 
-### `scriptsClass`
-Type: *string*
-
-Default: `autoroutes-script`
-
-Class added to the scripts from your views, used internally to clean views scripts from the page when the views are removed. *Override only if you know what you're doing*.
-
 ### `baseFolder`
 Type: *string*
 
@@ -294,6 +339,37 @@ Default: `"/"`
 The base path to be prepended to the URL to fetch the view files. Leave blank if you serve all the static content from the same folder as the main HTML file of your application.
 
 Since you should serve your main file (say `/public/index.html`) as a catch-all route from your server, the path to the other view files will usually not resolve, you might then just want to catch all requests to the path `/src` for instance, and forward them to the `src` folder of your frontend application, then you should set `baseFolder` to `/src`. For nested folders: if all your views are under `/src/views` in your folder structure for instance, you might as well set `baseFolder` to `/src/views`.
+
+### `parsers`
+Type: `Array` ([ParserObject](#parserobject))
+
+Default: `null`
+
+
+This array can be filled with custom parsers ([ParserObject](#parserobject)) for file types or template types not supported by Autoroutes.js by default. 
+
+#### ParserObject
+Each parser has to be an `object` with both the `parse` and `pattern` keys.
+
+**Keys:**
+
+* `parse`: `Function` with one parameter (the content to be parsed) of type string | [Node](https://developer.mozilla.org/en-US/docs/Web/API/Node) | [Element](https://developer.mozilla.org/en-US/docs/Web/API/Element) | [Document](https://developer.mozilla.org/en-US/docs/Web/API/Document) | [DocumentFragment](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment)
+* `pattern`: `string` | [Regular Expression](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions)
+
+**Example:**
+
+```javascript
+const parsers = [
+    {
+        parse: mdString => marked.parse(mdString),
+        pattern: '.md$'
+    },
+    {
+        parse: mdxString => parseCustomMd(mdxString),
+        pattern: '.mdx$|.mdy$'
+    }
+];
+```
 
 
 ## API
