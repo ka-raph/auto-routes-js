@@ -104,7 +104,7 @@ async function mountView(route) {
     // Mount view
     const fixedPath = Autoroutes.baseFolder + path;
     if (path.match(/\.html/)) {
-        await loadHTMLView(fixedPath);
+        await loadViewFromFile(fixedPath);
     }
     else if (path.match(/\.js/)) {
         await loadJSView(fixedPath);
@@ -116,7 +116,7 @@ async function mountView(route) {
             if (!validateCustomParser(fixedPath, customParser)) return;
 
             hasParser = true;
-            await loadCustomView(fixedPath, customParser)
+            await loadViewFromFile(fixedPath, customParser)
             break;
         }
         if (!hasParser && Autoroutes.debug) return console.error(`${Autoroutes.name}: File type not supported... yet. Try setting up a parser for this file's type ${fixedPath}`);
@@ -179,8 +179,9 @@ function getFilePath(routeArray, currentPathValue = Autoroutes.routes) {
 
     // Handle wildcard & 404
     let wildcardRoute = '';
-    if (newPathValue === undefined && typeof currentPathValue === 'object') {
-        wildcardRoute = Object.keys(currentPathValue).find(key => key.charAt(0) === Autoroutes.wildcardChar);
+    if (newPathValue === undefined) {
+        // currentPathValue can be `undefined` then it's a 404
+        wildcardRoute = typeof currentPathValue === 'object' ? Object.keys(currentPathValue).find(key => key.charAt(0) === Autoroutes.wildcardChar) : '';
         if (wildcardRoute) {
             // Only first wildcard will be caught
             // TODO handle multiple wildcards at same level
@@ -202,65 +203,62 @@ function getFilePath(routeArray, currentPathValue = Autoroutes.routes) {
 
 async function loadJSView(viewRelativeUrl) {
     // Import view from the JS file
-    await import(viewRelativeUrl).then(async view => {
-        const html = await view.default;
-        if (typeof html === 'string') {
-            MAIN_CONTAINER.innerHTML = html;
-            return;
-        }
-
-        MAIN_CONTAINER.innerHTML = ''; // Not in the beginning of the function because if the document is massive there would be a temporary blank view
-        if (Array.isArray(html)) {
-            MAIN_CONTAINER.append(...html);
-        }
-        else if (html instanceof Node || html instanceof Element || html instanceof Document || html instanceof DocumentFragment) {
-            MAIN_CONTAINER.append(html);
-        }
-    });
+    await import(viewRelativeUrl).then(async view => updateTemplate(view.default));
 }
 
-async function loadHTMLView(viewRelativeUrl) {
-    // Fetches the view's HTML file and returns its content
-    const htmlUrl = new URL(viewRelativeUrl, Autoroutes.appPath).href;
-    const response = await fetch(htmlUrl);
-    const viewHtml = await response.text();
-
-    // Create document Fragment, this can allow sripts to run
-    const range = document.createRange();
-    range.selectNode(MAIN_CONTAINER);
-    const documentFragment = range.createContextualFragment(viewHtml);
-
-    MAIN_CONTAINER.innerHTML = '';
-    MAIN_CONTAINER.appendChild(documentFragment);
-}
-
-async function loadCustomView(viewRelativeUrl, customParser) { // TODORAF refactor with JS loading function above
+async function loadViewFromFile(viewRelativeUrl, customParser) {
     // Fetches the view's HTML file and returns its content
     const fileUrl = new URL(viewRelativeUrl, Autoroutes.appPath).href;
     const response = await fetch(fileUrl);
     const viewString = await response.text();
-    const viewParsed = await customParser.parse(viewString);
-    let contentToAppend = null;
-
-    if (typeof viewParsed === 'string') {
-        // Create document Fragment, this can allow sripts to run
-        const range = document.createRange();
-        range.selectNode(MAIN_CONTAINER);
-        contentToAppend = [range.createContextualFragment(viewParsed)];
-    }
-    else if (Array.isArray(viewParsed)) {
-        contentToAppend = [...viewParsed];
-    }
-    else if (viewParsed instanceof Node || viewParsed instanceof Element || viewParsed instanceof Document || viewParsed instanceof DocumentFragment) {
-        contentToAppend = [viewParsed];
+    if (customParser)  {
+        const viewParsed = await customParser.parse(viewString);
+        updateTemplate(viewParsed)
     }
     else {
-        // TODORAF handle that case
-        return;
+        // HTML, raw text...
+        updateTemplate(viewString);
     }
+}
 
-    MAIN_CONTAINER.innerHTML = '';
-    MAIN_CONTAINER.append(...contentToAppend);
+function updateTemplate(newTemplate) {
+    let contentToAppend = null;
+
+    try {
+        if (typeof newTemplate === 'string') {
+            // Create document Fragment, this can allow sripts to run
+            const range = document.createRange();
+            range.selectNode(MAIN_CONTAINER);
+            contentToAppend = [range.createContextualFragment(newTemplate)];
+        }
+        else if (Array.isArray(newTemplate)) {
+            MAIN_CONTAINER.innerHTML = '';
+
+            // Arrays may contain items of different types, this allows mixing HTML strings and other Element/Node-like items. Ugly, but better than checking individually just for throwing an error if they're mixed
+            newTemplate.forEach(templateItem => {
+                if (typeof templateItem === 'string') {
+                    MAIN_CONTAINER.innerHTML += templateItem;
+                }
+                else if (newTemplate instanceof Node || newTemplate instanceof Element || newTemplate instanceof Document || newTemplate instanceof DocumentFragment) {
+                    MAIN_CONTAINER.append(templateItem)
+                }
+            });
+            return;
+        }
+        else if (newTemplate instanceof Node || newTemplate instanceof Element || newTemplate instanceof Document || newTemplate instanceof DocumentFragment) {
+            contentToAppend = [newTemplate];
+        }
+        else {
+            throw new Error(`${Autoroutes.name}: The received template must be a valid HTML string, Node, Element, Document, DocumentFragment or must be an array containing items of the previously listed types.`);
+        }
+
+        MAIN_CONTAINER.innerHTML = '';
+        MAIN_CONTAINER.append(...contentToAppend);
+    }
+    catch (e) {
+        console.error(e);
+        console.error(`${Autoroutes.name}: The error above occurred while trying to update the view.`);
+    }
 }
 
 function validateCustomParser(fixedPath, customParser) {
