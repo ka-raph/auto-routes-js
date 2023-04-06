@@ -36,7 +36,7 @@ In your main HTML file, say `/public/index.html`, add the CDN script before you 
     <header>Welcome to My Awesome SPA</header>
     <section id="autoroutes-view"></section>
     <!-- You can use unpkg or any other NPM to CDN service -->
-    <script src="https://www.unpkg.com/auto-routes-js@1.2.0/dist/Autoroutes-v1.2.0.min.js" type="module"></script>
+    <script src="https://www.unpkg.com/auto-routes-js@1.2.1/dist/Autoroutes-v1.2.1.min.js" type="module"></script>
     <script src="/src/index.js" type="module"></script>
   </body>
 </html>
@@ -81,7 +81,7 @@ In your main HTML file, say `/public/index.html`, add add a tag with the id `aut
   <body>
     <header>Welcome to My Awesome SPA</header>
     <section id="autoroutes-view"></section>
-    <script src="https://www.unpkg.com/auto-routes-js@1.2.0/dist/Autoroutes-v1.2.0.min.js" type="module"></script>
+    <script src="https://www.unpkg.com/auto-routes-js@1.2.1/dist/Autoroutes-v1.2.1.min.js" type="module"></script>
     <script src="/src/index.js" type="module"></script>
   </body>
 </html>
@@ -414,6 +414,13 @@ Type: Array of objects `{name: string, value: string}`
 Default: `[]`
 
 Returns a list of all the wilcards on the current route with their value. For example for a URL path `/user/1234/transactions/abc123` corresponding to the route `/user/:id/transactions/:transactionId`, this would return `[{name: ':id', value: '1234'}, {name: ':transactionId', value: 'abc123'}]`. **You should avoid mutating that value.**
+
+### `originPath`
+Type: `string`
+
+*readonly*
+
+Returns the base path of your app that excludes the origin.
 
 ### `name`
 Type: `string`
